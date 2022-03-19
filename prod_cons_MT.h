@@ -9,6 +9,7 @@ struct monitor {
     long *shared_buffer;
     long producer_pos;
     long nums_produced, divide;
+    long is_full, is_empty;
 
     pthread_mutex_t buffer_lock;
     pthread_cond_t full;

@@ -14,9 +14,12 @@ void init_monitor() {
     m1.nums_produced = m1.n_producers * (m1.b_size * 2);
 
     m1.divide = m1.nums_produced / m1.n_consumers;
+
+    m1.is_empty = 1;
+    m1.is_full = 0;
 }
 
-// TODO: P0 is the only one writing to my shared buffer
+// TODO: P0 is the only one writing to my shared buffer?
 void *Producer(void *t) {
 
     int i;
@@ -36,15 +39,19 @@ void *Producer(void *t) {
             } else {
                 m1.producer_pos += 1;
             }
-            pthread_mutex_unlock(&m1.buffer_lock);
+            m1.is_empty = 0;
             pthread_cond_signal(&m1.empty);
         }
             // Buffer is full
         else {
+            m1.is_full = 1;
             printf("P%ld: Blocked due to full buffer\n", tid);
-            pthread_cond_wait(&m1.full, &m1.buffer_lock);
+            while (m1.is_full) {
+                pthread_cond_wait(&m1.full, &m1.buffer_lock);
+            }
             printf("P%ld: Done waiting on full buffer\b", tid);
         }
+        pthread_mutex_unlock(&m1.buffer_lock);
     }
 
     printf("P%ld: Exiting\n", tid);
@@ -55,7 +62,7 @@ void *Consumer(void *t) {
     long tid, i, tmp, will_consume;
     tid = (long) t;
 
-    // TODO: Here
+    // TODO: Fix this
     if (m1.divide == 0) {
         printf("DIVIDE IS ZERO FIX THIS!");
         exit(1);
@@ -80,13 +87,17 @@ void *Consumer(void *t) {
                 will_consume -= 1;
                 m1.shared_buffer[i] = 0;
             }
-            pthread_mutex_unlock(&m1.buffer_lock);
         }
-        pthread_cond_signal(&m1.full);
         if (will_consume > 0) {
+            m1.is_empty = 1;
             printf("C%ld: Blocked due to empty buffer\n", tid);
-            pthread_cond_wait(&m1.empty, &m1.buffer_lock);
+            while (m1.is_empty) {
+                pthread_cond_wait(&m1.empty, &m1.buffer_lock);
+            }
             printf("C%ld: Done waiting on empty buffer\n", tid);
         }
+        m1.is_full = 0;
+        pthread_cond_signal(&m1.full);
+        pthread_mutex_unlock(&m1.buffer_lock);
     }
 }
