@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-// TODO: Signals
-// TODO: May have to use two buffer locks?
-
 extern struct monitor m1;
 
 void init_monitor() {
@@ -39,6 +36,8 @@ void *Producer(void *t) {
             } else {
                 m1.producer_pos += 1;
             }
+            pthread_mutex_unlock(&m1.buffer_lock);
+            pthread_cond_signal(&m1.empty);
         }
             // Buffer is full
         else {
@@ -46,19 +45,17 @@ void *Producer(void *t) {
             pthread_cond_wait(&m1.full, &m1.buffer_lock);
             printf("P%ld: Done waiting on full buffer\b", tid);
         }
-        pthread_mutex_unlock(&m1.buffer_lock);
-        pthread_cond_signal(&m1.empty);
     }
 
     printf("P%ld: Exiting\n", tid);
     pthread_exit((void *) t);
 }
 
-// TODO: Don't care about index, just the number of things you're going to read
 void *Consumer(void *t) {
     long tid, i, tmp, will_consume;
     tid = (long) t;
 
+    // TODO: Here
     if (m1.divide == 0) {
         printf("DIVIDE IS ZERO FIX THIS!");
         exit(1);
@@ -84,8 +81,8 @@ void *Consumer(void *t) {
                 m1.shared_buffer[i] = 0;
             }
             pthread_mutex_unlock(&m1.buffer_lock);
-            pthread_cond_signal(&m1.full);
         }
+        pthread_cond_signal(&m1.full);
         if (will_consume > 0) {
             printf("C%ld: Blocked due to empty buffer\n", tid);
             pthread_cond_wait(&m1.empty, &m1.buffer_lock);
