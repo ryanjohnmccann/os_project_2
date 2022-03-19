@@ -20,8 +20,8 @@ int main(int argc, char *argv[]) {
 
     // Initialize struct values
     m1.b_size = buffer_size;
-    m1.n_consumers = num_producers;
-    m1.n_producers = num_consumers;
+    m1.n_consumers = num_consumers;
+    m1.n_producers = num_producers;
 
     // Fill monitor will a bunch of "null" values
     init_monitor();

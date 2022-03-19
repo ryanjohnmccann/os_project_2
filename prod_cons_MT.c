@@ -14,6 +14,8 @@ void init_monitor() {
         m1.shared_buffer[i] = -1;
     }
     m1.producer_pos = 0;
+    m1.nums_produced = m1.n_producers * (m1.b_size * 2);
+    m1.divide = m1.nums_produced / m1.n_consumers;
 }
 
 void *Producer(void *t) {
@@ -51,29 +53,24 @@ void *Producer(void *t) {
 }
 
 void *Consumer(void *t) {
-    long tid, start_ind, end_ind, nums_produced, divide, i;
+    long tid, start_ind, end_ind, i;
 
     tid = (long) t;
-    nums_produced = m1.n_producers * (m1.b_size * 2);
-    divide = nums_produced / m1.n_consumers;
 
     // TODO: All threads will get one and the last will be skipped
-    if (divide == 0) {
+    if (m1.divide == 0) {
         printf("DIVIDE IS ZERO FIX THIS!");
         exit(1);
     } else {
-        start_ind = (tid * divide);
+        start_ind = (tid * m1.divide);
     }
 
     // Our extra values thread
-    // TODO: Just go to max index here
-    if (tid == (m1.n_producers - 1)) {
-        end_ind = nums_produced;
+    if (tid == (m1.n_consumers - 1)) {
+        end_ind = m1.nums_produced;
     } else {
-        end_ind = start_ind + divide;
+        end_ind = start_ind + m1.divide;
     }
-
-    printf("%ld %ld\n", start_ind, end_ind);
 
     printf("C%ld: Consuming %ld values\n", tid, (end_ind - start_ind));
     for (i = start_ind; i < end_ind; i++) {
