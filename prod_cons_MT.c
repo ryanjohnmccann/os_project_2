@@ -34,6 +34,7 @@ void *Producer(void *t) {
         if (m1.shared_buffer[m1.producer_pos] == 0) {
             printf("P%ld: Writing %d to position %ld\n", tid, rand_int, m1.producer_pos);
             m1.shared_buffer[m1.producer_pos] = rand_int;
+            // Reset to the front of the queue
             if (m1.producer_pos == (m1.b_size - 1)) {
                 m1.producer_pos = 0;
             } else {
@@ -41,6 +42,7 @@ void *Producer(void *t) {
             }
             m1.is_empty = 0;
             pthread_cond_signal(&m1.empty);
+            pthread_mutex_unlock(&m1.buffer_lock);
         }
             // Buffer is full
         else {
@@ -51,7 +53,6 @@ void *Producer(void *t) {
             }
             printf("P%ld: Done waiting on full buffer\b", tid);
         }
-        pthread_mutex_unlock(&m1.buffer_lock);
     }
 
     printf("P%ld: Exiting\n", tid);
