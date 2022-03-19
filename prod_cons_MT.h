@@ -6,7 +6,6 @@
 
 struct monitor {
     long b_size, n_consumers, n_producers;
-    // TODO: Ask about this later
     long *shared_buffer;
     long producer_pos;
     long nums_produced, divide;

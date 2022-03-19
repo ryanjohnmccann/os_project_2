@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 // TODO: Signals
 // TODO: May have to use two buffer locks?
@@ -43,45 +44,52 @@ void *Producer(void *t) {
         else {
             printf("P%ld: Blocked due to full buffer\n", tid);
             pthread_cond_wait(&m1.full, &m1.buffer_lock);
+            printf("P%ld: Done waiting on full buffer\b", tid);
         }
         pthread_mutex_unlock(&m1.buffer_lock);
+        pthread_cond_signal(&m1.empty);
     }
 
     printf("P%ld: Exiting\n", tid);
     pthread_exit((void *) t);
 }
 
+// TODO: Don't care about index, just the number of things you're going to read
 void *Consumer(void *t) {
-    long tid, start_ind, end_ind, i, tmp;
+    long tid, i, tmp, will_consume;
     tid = (long) t;
 
-    // TODO: All threads will get one and the last will be skipped
     if (m1.divide == 0) {
         printf("DIVIDE IS ZERO FIX THIS!");
         exit(1);
     } else {
-        start_ind = (tid * m1.divide);
-    }
-
-    // Our extra values thread
-    if (tid == (m1.n_consumers - 1)) {
-        end_ind = m1.nums_produced;
-    } else {
-        end_ind = start_ind + m1.divide;
-    }
-
-    long will_consume = end_ind - start_ind;
-    printf("C%ld: Consuming %ld values\n", tid, will_consume);
-    for (i = start_ind; i < end_ind; i++) {
-        pthread_mutex_lock(&m1.buffer_lock);
-        // Position is empty
-        if (m1.shared_buffer[i] == 0) {
-            continue;
+        if (tid == (m1.n_consumers - 1)) {
+            will_consume = m1.nums_produced - ((m1.n_consumers - 1) * m1.divide);
         } else {
-            tmp = m1.shared_buffer[i];
-            printf("C%ld Reading %ld from position %ld\n", tid, tmp, i);
-            m1.shared_buffer[i] = 0;
+            will_consume = m1.divide;
         }
-        pthread_mutex_unlock(&m1.buffer_lock);
+    }
+
+    printf("C%ld: Consuming %ld values\n", tid, will_consume);
+    while (will_consume > 0) {
+        for (i = 0; i < m1.b_size; i++) {
+            pthread_mutex_lock(&m1.buffer_lock);
+            // Position is empty
+            if (m1.shared_buffer[i] == 0) {
+                continue;
+            } else {
+                tmp = m1.shared_buffer[i];
+                printf("C%ld Reading %ld from position %ld\n", tid, tmp, i);
+                will_consume -= 1;
+                m1.shared_buffer[i] = 0;
+            }
+            pthread_mutex_unlock(&m1.buffer_lock);
+            pthread_cond_signal(&m1.full);
+        }
+        if (will_consume > 0) {
+            printf("C%ld: Blocked due to empty buffer\n", tid);
+            pthread_cond_wait(&m1.empty, &m1.buffer_lock);
+            printf("C%ld: Done waiting on empty buffer\n", tid);
+        }
     }
 }
