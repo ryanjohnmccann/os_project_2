@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     m1.n_consumers = num_consumers;
     m1.n_producers = num_producers;
 
-    // Fill monitor will a bunch of "null" values
+    // Initialize monitor
     init_monitor();
 
     // Handle producer threads
@@ -79,6 +79,7 @@ int main(int argc, char *argv[]) {
         printf("Main: consumer %ld joined\n", t);
     }
 
+    free(m1.shared_buffer);
     printf("Main: Program completed\n");
     pthread_exit(NULL);
 }

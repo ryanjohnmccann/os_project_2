@@ -5,11 +5,11 @@
 #include <pthread.h>
 
 struct monitor {
-    int b_size, n_consumers, n_producers;
+    long b_size, n_consumers, n_producers;
     // TODO: Ask about this later
-    int shared_buffer[100000];
-    int producer_pos;
-    int nums_produced, divide;
+    long *shared_buffer;
+    long producer_pos;
+    long nums_produced, divide;
 
     pthread_mutex_t buffer_lock;
     pthread_cond_t full;
