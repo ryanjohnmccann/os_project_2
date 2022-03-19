@@ -7,11 +7,12 @@
 struct monitor {
     long b_size, n_consumers, n_producers;
     long *shared_buffer;
-    long producer_pos;
+    long producer_pos, consumer_pos;
     long nums_produced, divide;
     long is_full, is_empty;
 
     pthread_mutex_t buffer_lock;
+    pthread_mutex_t buffer_lock_2;
     pthread_cond_t full;
     pthread_cond_t empty;
 };

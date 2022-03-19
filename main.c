@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
     // Handle producer threads
     pthread_t producer_threads[m1.n_producers];
     pthread_mutex_init(&m1.buffer_lock, NULL);
+    pthread_mutex_init(&m1.buffer_lock_2, NULL);
     pthread_cond_init(&m1.full, NULL);
 
     // Create threads
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
 
     // Destroy
     pthread_mutex_destroy(&m1.buffer_lock);
+    pthread_mutex_destroy(&m1.buffer_lock_2);
     pthread_cond_destroy(&m1.full);
     pthread_cond_destroy(&m1.empty);
 

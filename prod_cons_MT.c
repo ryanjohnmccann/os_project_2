@@ -20,6 +20,7 @@ void init_monitor() {
 }
 
 // TODO: P0 is the only one writing to my shared buffer?
+// TODO: FIFO Queue
 void *Producer(void *t) {
 
     int i;
@@ -41,18 +42,18 @@ void *Producer(void *t) {
                 m1.producer_pos += 1;
             }
             m1.is_empty = 0;
-            pthread_cond_signal(&m1.empty);
-            pthread_mutex_unlock(&m1.buffer_lock);
         }
             // Buffer is full
         else {
             m1.is_full = 1;
+            pthread_cond_signal(&m1.empty);
             printf("P%ld: Blocked due to full buffer\n", tid);
             while (m1.is_full) {
                 pthread_cond_wait(&m1.full, &m1.buffer_lock);
             }
             printf("P%ld: Done waiting on full buffer\b", tid);
         }
+        pthread_mutex_unlock(&m1.buffer_lock);
     }
 
     printf("P%ld: Exiting\n", tid);
@@ -81,6 +82,7 @@ void *Consumer(void *t) {
             pthread_mutex_lock(&m1.buffer_lock);
             // Position is empty
             if (m1.shared_buffer[i] == 0) {
+                pthread_mutex_unlock(&m1.buffer_lock);
                 continue;
             } else {
                 tmp = m1.shared_buffer[i];
@@ -88,6 +90,9 @@ void *Consumer(void *t) {
                 will_consume -= 1;
                 m1.shared_buffer[i] = 0;
             }
+            m1.is_full = 0;
+            pthread_cond_signal(&m1.full);
+            pthread_mutex_unlock(&m1.buffer_lock);
         }
         if (will_consume > 0) {
             m1.is_empty = 1;
@@ -97,8 +102,5 @@ void *Consumer(void *t) {
             }
             printf("C%ld: Done waiting on empty buffer\n", tid);
         }
-        m1.is_full = 0;
-        pthread_cond_signal(&m1.full);
-        pthread_mutex_unlock(&m1.buffer_lock);
     }
 }
