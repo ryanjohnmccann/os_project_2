@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
     // Handle producer threads
     pthread_t producer_threads[m1.n_producers];
     pthread_mutex_init(&m1.buffer_lock, NULL);
+    // TODO: Not sure if I actually need a second lock
     pthread_mutex_init(&m1.buffer_lock_2, NULL);
     pthread_cond_init(&m1.full, NULL);
 

@@ -8,19 +8,23 @@
 extern struct monitor m1;
 
 void init_monitor() {
+    // Dynamically allocate memory for shared_buffer based on user input
     m1.shared_buffer = malloc(sizeof(long) * m1.b_size);
 
+    // Defines the current read/write positions in the queue
     m1.producer_pos = 0;
+    m1.consumer_pos = 0;
+    // Total amount of values to be produced
     m1.nums_produced = m1.n_producers * (m1.b_size * 2);
 
+    // The divided number to calculate even value distribution between consumer threads (extra handled later)
     m1.divide = m1.nums_produced / m1.n_consumers;
 
+    // Is empty set to true, is full set to false
     m1.is_empty = 1;
     m1.is_full = 0;
 }
 
-// TODO: P0 is the only one writing to my shared buffer?
-// TODO: FIFO Queue
 void *Producer(void *t) {
 
     int i;
@@ -43,7 +47,7 @@ void *Producer(void *t) {
             }
             m1.is_empty = 0;
         }
-            // Buffer is full
+        // Buffer is full
         else {
             m1.is_full = 1;
             pthread_cond_signal(&m1.empty);
@@ -61,7 +65,8 @@ void *Producer(void *t) {
 }
 
 void *Consumer(void *t) {
-    long tid, i, tmp, will_consume;
+    long tid, track_pos, tmp, will_consume;
+    track_pos = 0;
     tid = (long) t;
 
     // TODO: Fix this
@@ -78,29 +83,37 @@ void *Consumer(void *t) {
 
     printf("C%ld: Consuming %ld values\n", tid, will_consume);
     while (will_consume > 0) {
-        for (i = 0; i < m1.b_size; i++) {
-            pthread_mutex_lock(&m1.buffer_lock);
-            // Position is empty
-            if (m1.shared_buffer[i] == 0) {
-                pthread_mutex_unlock(&m1.buffer_lock);
-                continue;
-            } else {
-                tmp = m1.shared_buffer[i];
-                printf("C%ld Reading %ld from position %ld\n", tid, tmp, i);
-                will_consume -= 1;
-                m1.shared_buffer[i] = 0;
+        track_pos += 1;
+        pthread_mutex_lock(&m1.buffer_lock);
+        // Buffer must be empty
+        if (track_pos == m1.b_size) {
+            track_pos = 0;
+            m1.is_empty = 1;
+            while (m1.is_empty) {
+                printf("C%ld: Blocked due to empty buffer\n", tid);
+                pthread_cond_wait(&m1.empty, &m1.buffer_lock);
+                printf("C%ld: Done waiting on empty buffer\n", tid);
             }
+        }
+        if (m1.shared_buffer[m1.consumer_pos] != 0) {
+            tmp = m1.shared_buffer[m1.consumer_pos];
+            printf("C%ld Reading %ld from position %ld\n", tid, tmp, m1.consumer_pos);
+            m1.shared_buffer[m1.consumer_pos] = 0;
             m1.is_full = 0;
             pthread_cond_signal(&m1.full);
+            will_consume -= 1;
+        }
+        // Space was empty
+        else {
             pthread_mutex_unlock(&m1.buffer_lock);
+            continue;
         }
-        if (will_consume > 0) {
-            m1.is_empty = 1;
-            printf("C%ld: Blocked due to empty buffer\n", tid);
-            while (m1.is_empty) {
-                pthread_cond_wait(&m1.empty, &m1.buffer_lock);
-            }
-            printf("C%ld: Done waiting on empty buffer\n", tid);
+        if (m1.consumer_pos == (m1.b_size - 1)) {
+            m1.consumer_pos = 0;
         }
+        else {
+            m1.consumer_pos += 1;
+        }
+        pthread_mutex_unlock(&m1.buffer_lock);
     }
 }
