@@ -35,8 +35,11 @@ void *Producer(void *t) {
 
     printf("P%ld: Producing %ld values\n", tid, m1.b_size * 2);
     while (will_produce > 0) {
+        // Our initial position may not be zero, so we know we've gone through the entire queue when tracked position
+        // equals the size of the queue.
         track_pos += 1;
         pthread_mutex_lock(&m1.buffer_lock);
+        // Queue must be full
         if (track_pos == m1.b_size) {
             track_pos = 0;
             m1.is_full = 1;
@@ -46,6 +49,7 @@ void *Producer(void *t) {
                 printf("P%ld: Done waiting on full buffer\n", tid);
             }
         }
+        // Position is empty
         if (m1.shared_buffer[m1.producer_pos] == 0) {
             tmp = (rand() % 10) + 1;
             printf("P%ld: Writing %ld to position %ld\n", tid, tmp, m1.producer_pos);
