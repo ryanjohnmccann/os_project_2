@@ -27,35 +27,42 @@ void init_monitor() {
 
 void *Producer(void *t) {
 
-    int i;
-    long tid;
+    long tid, track_pos, tmp, will_produce;
     tid = (long) t;
-    printf("P%ld: Producing %ld values\n", tid, m1.b_size * 2);
 
-    for (i = 0; i < (m1.b_size * 2); i++) {
-        int rand_int = (rand() % 10) + 1;
+    track_pos = 0;
+    will_produce = (m1.b_size * 2);
+
+    printf("P%ld: Producing %ld values\n", tid, m1.b_size * 2);
+    while (will_produce > 0) {
+        track_pos += 1;
         pthread_mutex_lock(&m1.buffer_lock);
-        // Entry is empty
-        if (m1.shared_buffer[m1.producer_pos] == 0) {
-            printf("P%ld: Writing %d to position %ld\n", tid, rand_int, m1.producer_pos);
-            m1.shared_buffer[m1.producer_pos] = rand_int;
-            // Reset to the front of the queue
-            if (m1.producer_pos == (m1.b_size - 1)) {
-                m1.producer_pos = 0;
-            } else {
-                m1.producer_pos += 1;
-            }
-            m1.is_empty = 0;
-        }
-        // Buffer is full
-        else {
+        if (track_pos == m1.b_size) {
+            track_pos = 0;
             m1.is_full = 1;
-            pthread_cond_signal(&m1.empty);
-            printf("P%ld: Blocked due to full buffer\n", tid);
             while (m1.is_full) {
+                printf("P%ld: Blocked due to full buffer\n", tid);
                 pthread_cond_wait(&m1.full, &m1.buffer_lock);
+                printf("P%ld: Done waiting on full buffer\n", tid);
             }
-            printf("P%ld: Done waiting on full buffer\b", tid);
+        }
+        if (m1.shared_buffer[m1.producer_pos] == 0) {
+            tmp = (rand() % 10) + 1;
+            printf("P%ld: Writing %ld to position %ld\n", tid, tmp, m1.producer_pos);
+            m1.shared_buffer[m1.producer_pos] = tmp;
+            m1.is_empty = 0;
+            pthread_cond_signal(&m1.empty);
+            will_produce -= 1;
+        }
+        else {
+            pthread_mutex_unlock(&m1.buffer_lock);
+            continue;
+        }
+        if (m1.producer_pos == (m1.b_size - 1)) {
+            m1.producer_pos = 0;
+        }
+        else {
+            m1.producer_pos += 1;
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
@@ -74,6 +81,7 @@ void *Consumer(void *t) {
         printf("DIVIDE IS ZERO FIX THIS!");
         exit(1);
     } else {
+        // Values to be consumed by last consumer thread (Will handle extras)
         if (tid == (m1.n_consumers - 1)) {
             will_consume = m1.nums_produced - ((m1.n_consumers - 1) * m1.divide);
         } else {
@@ -83,9 +91,11 @@ void *Consumer(void *t) {
 
     printf("C%ld: Consuming %ld values\n", tid, will_consume);
     while (will_consume > 0) {
+        // Our initial position may not be zero, so we know we've gone through the entire queue when tracked position
+        // equals the size of the queue.
         track_pos += 1;
         pthread_mutex_lock(&m1.buffer_lock);
-        // Buffer must be empty
+        // Buffer must be empty or all values read
         if (track_pos == m1.b_size) {
             track_pos = 0;
             m1.is_empty = 1;
@@ -108,6 +118,7 @@ void *Consumer(void *t) {
             pthread_mutex_unlock(&m1.buffer_lock);
             continue;
         }
+        // Reset consumer position to the front of the queue
         if (m1.consumer_pos == (m1.b_size - 1)) {
             m1.consumer_pos = 0;
         }
@@ -116,4 +127,5 @@ void *Consumer(void *t) {
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
+    pthread_exit((void *) t);
 }
