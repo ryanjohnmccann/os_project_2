@@ -47,11 +47,6 @@ void *Producer(void *t) {
             pthread_cond_wait(&m1.full, &m1.buffer_lock);
             printf("P%ld: Done waiting on full buffer\n", tid);
         }
-        if (m1.producer_pos == (m1.b_size - 1)) {
-            m1.producer_pos = 0;
-        } else {
-            m1.producer_pos += 1;
-        }
         // Position is empty
         if (m1.shared_buffer[m1.producer_pos] == 0) {
             tmp = (rand() % 10) + 1;
@@ -60,6 +55,11 @@ void *Producer(void *t) {
             m1.is_empty = 0;
             pthread_cond_signal(&m1.empty);
             will_produce -= 1;
+        }
+        if (m1.producer_pos == (m1.b_size - 1)) {
+            m1.producer_pos = 0;
+        } else {
+            m1.producer_pos += 1;
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
@@ -101,12 +101,6 @@ void *Consumer(void *t) {
             pthread_cond_wait(&m1.empty, &m1.buffer_lock);
             printf("C%ld: Done waiting on empty buffer\n", tid);
         }
-        if (m1.consumer_pos == (m1.b_size - 1)) {
-            m1.consumer_pos = 0;
-        } else {
-            m1.consumer_pos += 1;
-        }
-
         // Space is not empty
         if (m1.shared_buffer[m1.consumer_pos] != 0) {
             tmp = m1.shared_buffer[m1.consumer_pos];
@@ -115,6 +109,11 @@ void *Consumer(void *t) {
             m1.is_full = 0;
             pthread_cond_signal(&m1.full);
             will_consume -= 1;
+        }
+        if (m1.consumer_pos == (m1.b_size - 1)) {
+            m1.consumer_pos = 0;
+        } else {
+            m1.consumer_pos += 1;
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
