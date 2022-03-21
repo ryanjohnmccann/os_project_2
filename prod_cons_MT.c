@@ -12,8 +12,8 @@ void init_monitor() {
     m1.shared_buffer = malloc(sizeof(long) * m1.b_size);
 
     // Defines the current read/write positions in the queue
-    m1.producer_pos = 0;
-    m1.consumer_pos = 0;
+    m1.producer_pos = -1;
+    m1.consumer_pos = -1;
     // Total amount of values to be produced
     m1.nums_produced = m1.n_producers * (m1.b_size * 2);
 
@@ -39,6 +39,12 @@ void *Producer(void *t) {
         // equals the size of the queue.
         track_pos += 1;
         pthread_mutex_lock(&m1.buffer_lock);
+        if (m1.producer_pos == (m1.b_size - 1)) {
+            m1.producer_pos = 0;
+        }
+        else {
+            m1.producer_pos += 1;
+        }
         // Queue must be full
         if (track_pos == m1.b_size) {
             track_pos = 0;
@@ -61,12 +67,6 @@ void *Producer(void *t) {
         else {
             pthread_mutex_unlock(&m1.buffer_lock);
             continue;
-        }
-        if (m1.producer_pos == (m1.b_size - 1)) {
-            m1.producer_pos = 0;
-        }
-        else {
-            m1.producer_pos += 1;
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
@@ -99,6 +99,13 @@ void *Consumer(void *t) {
         // equals the size of the queue.
         track_pos += 1;
         pthread_mutex_lock(&m1.buffer_lock);
+        // Reset consumer position to the front of the queue
+        if (m1.consumer_pos == (m1.b_size - 1)) {
+            m1.consumer_pos = 0;
+        }
+        else {
+            m1.consumer_pos += 1;
+        }
         // Buffer must be empty or all values read
         if (track_pos == m1.b_size) {
             track_pos = 0;
@@ -121,13 +128,6 @@ void *Consumer(void *t) {
         else {
             pthread_mutex_unlock(&m1.buffer_lock);
             continue;
-        }
-        // Reset consumer position to the front of the queue
-        if (m1.consumer_pos == (m1.b_size - 1)) {
-            m1.consumer_pos = 0;
-        }
-        else {
-            m1.consumer_pos += 1;
         }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
