@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 struct monitor {
-    long b_size, n_consumers, n_producers;
+    long b_size, n_consumers, n_producers, producer_pos, consumer_pos;
     long *shared_buffer;
     long nums_produced, divide;
     long is_full, is_empty;
