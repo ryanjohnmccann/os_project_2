@@ -77,10 +77,14 @@ void *Consumer(void *t) {
 
     tid = (long) t;
 
-    // TODO: Fix this
+    // More consumers than there are values produced
     if (m1.divide == 0) {
-        printf("DIVIDE IS ZERO FIX THIS!");
-        exit(1);
+        if (tid < m1.nums_produced) {
+            will_consume = 1;
+        }
+        else {
+            will_consume = 0;
+        }
     } else {
         // Values to be consumed by last consumer thread (extras)
         if (tid == (m1.n_consumers - 1)) {
