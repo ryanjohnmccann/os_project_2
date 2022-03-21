@@ -11,7 +11,6 @@ struct monitor {
     long is_full, is_empty;
 
     pthread_mutex_t buffer_lock;
-    pthread_mutex_t buffer_lock_2;
     pthread_cond_t full;
     pthread_cond_t empty;
 };
