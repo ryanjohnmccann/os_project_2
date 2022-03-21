@@ -41,8 +41,7 @@ void *Producer(void *t) {
         pthread_mutex_lock(&m1.buffer_lock);
         if (m1.producer_pos == (m1.b_size - 1)) {
             m1.producer_pos = 0;
-        }
-        else {
+        } else {
             m1.producer_pos += 1;
         }
         // Queue must be full
@@ -64,10 +63,6 @@ void *Producer(void *t) {
             pthread_cond_signal(&m1.empty);
             will_produce -= 1;
         }
-        else {
-            pthread_mutex_unlock(&m1.buffer_lock);
-            continue;
-        }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
 
@@ -76,6 +71,7 @@ void *Producer(void *t) {
 }
 
 void *Consumer(void *t) {
+
     long tid, track_pos, tmp, will_consume;
     track_pos = 0;
     tid = (long) t;
@@ -102,8 +98,7 @@ void *Consumer(void *t) {
         // Reset consumer position to the front of the queue
         if (m1.consumer_pos == (m1.b_size - 1)) {
             m1.consumer_pos = 0;
-        }
-        else {
+        } else {
             m1.consumer_pos += 1;
         }
         // Buffer must be empty or all values read
@@ -116,6 +111,7 @@ void *Consumer(void *t) {
                 printf("C%ld: Done waiting on empty buffer\n", tid);
             }
         }
+        // Space is not empty
         if (m1.shared_buffer[m1.consumer_pos] != 0) {
             tmp = m1.shared_buffer[m1.consumer_pos];
             printf("C%ld Reading %ld from position %ld\n", tid, tmp, m1.consumer_pos);
@@ -124,12 +120,8 @@ void *Consumer(void *t) {
             pthread_cond_signal(&m1.full);
             will_consume -= 1;
         }
-        // Space was empty
-        else {
-            pthread_mutex_unlock(&m1.buffer_lock);
-            continue;
-        }
         pthread_mutex_unlock(&m1.buffer_lock);
     }
+    printf("C%ld: Exiting\n", tid);
     pthread_exit((void *) t);
 }
