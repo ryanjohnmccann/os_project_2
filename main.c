@@ -58,11 +58,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Destroy
-    pthread_mutex_destroy(&m1.buffer_lock);
-    pthread_cond_destroy(&m1.full);
-    pthread_cond_destroy(&m1.empty);
-
     // Join producer threads
     for (t = 0; t < m1.n_producers; t++) {
         rc = pthread_join(producer_threads[t], &status);
@@ -82,7 +77,10 @@ int main(int argc, char *argv[]) {
         printf("Main: consumer %ld joined\n", t);
     }
 
-    // Free allocated data and exit
+    // Free allocated data, destroy, and exit
+    pthread_mutex_destroy(&m1.buffer_lock);
+    pthread_cond_destroy(&m1.full);
+    pthread_cond_destroy(&m1.empty);
     free(m1.shared_buffer);
     printf("Main: Program completed\n");
     pthread_exit(NULL);
