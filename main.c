@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
 
     // Handle consumer threads
     pthread_t consumer_threads[m1.n_consumers];
-    pthread_mutex_init(&m1.buffer_lock, NULL);
     pthread_cond_init(&m1.empty, NULL);
 
     // Create threads
